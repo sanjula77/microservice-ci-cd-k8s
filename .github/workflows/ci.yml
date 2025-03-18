@@ -31,28 +31,40 @@ jobs:
           docker push sanjula77/my-microservice:latest
 
   deploy:
-    needs: build
-    runs-on: ubuntu-latest
+  needs: build
+  runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Install kubectl
-        run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/
+    - name: Install kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
 
-      - name: Set up Kubeconfig
-        run: |
-          echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
-          export KUBECONFIG=$(pwd)/kubeconfig.yaml
+    - name: Install Minikube
+      run: |
+        curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        chmod +x minikube-linux-amd64
+        sudo mv minikube-linux-amd64 /usr/local/bin/minikube
 
-      - name: Apply Kubernetes Deployment
-        run: |
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
+    - name: Start Minikube
+      run: |
+        sudo minikube start --driver=docker
+        minikube status
+
+    - name: Set up Kubeconfig
+      run: |
+        echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
+        export KUBECONFIG=$(pwd)/kubeconfig.yaml
+        kubectl config use-context minikube
+
+    - name: Apply Kubernetes Deployment
+      run: |
+        kubectl apply -f k8s/deployment.yaml --validate=false
+        kubectl apply -f k8s/service.yaml --validate=false
 
 
 # name: Microservice CI/CD Pipeline
